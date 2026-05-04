@@ -1,6 +1,10 @@
 import os
 import json
 import requests
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.action_chains import ActionChains
 from bs4 import BeautifulSoup
 
 product_code = input("Provide product code: ")
@@ -12,10 +16,20 @@ headers = {
     "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0"
 }
 
+url = f"https://www.ceneo.pl/{product_code}/opinie-{page}"
+path_to_driver = 'D:\chromedriver-win64\\chromedriver.exe'
+s = Service(path_to_driver)
+driver = webdriver.Chrome(service=s)
+driver.get(url)
+driver.maximize_window()
+driver.find_element(by="xpath", value='//*[@id="js_cookie-consent-general"]/div/div[2]/button[1]').click()
+
 all_opinions = []
 while next:
     url = f"https://www.ceneo.pl/{product_code}/opinie-{page}"
+    print(url)
     response = requests.get(url, headers = headers)
+    
     if response.status_code == 200:
         page_dom = BeautifulSoup(response.text, 'html.parser')
         product_name = page_dom.select_one('h1').get_text() if page == 1 else product_name
@@ -37,8 +51,10 @@ while next:
                 'purchase_date': opinion.select_one("span.user-post__published > time:nth-child(2)[datetime]").get('datetime').strip() if opinion.select_one("span.user-post__published > time:nth-child(2)[datetime]")  else None
             }
         all_opinions.append(single_opinion)
-next = True if page_dom.select_one('button.pagination_next') else False
-if next: page += 1 
+    next = True if page_dom.select_one('button.pagination_next') else False
+    if next:
+        page += 1
+        driver.find_element(by="xpath", value='//*[@id="reviews"]/div/div[6]/button[3]').click()
 
 if not os.path.exists("./opinions"):
     os.mkdir("./opinions")
